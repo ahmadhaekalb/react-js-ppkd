@@ -3,6 +3,7 @@ const FormPeserta = ({ onSimpan, onCancel, pesertaEdit}) => {
 
     const [nama, setNama] = useState("");
     const [jurusan, setJurusan] = useState("");
+    const [error, setError] = useState("");
 
     // useEffect : hasil request dari server menghasilkan sebuah data dan dirender hanya sekali
 
@@ -21,8 +22,9 @@ const FormPeserta = ({ onSimpan, onCancel, pesertaEdit}) => {
     const handleSimpan = (e) => {
         e.preventDefault();
         //jika dia ngedit
-        if(pesertaEdit){
-
+        if(!nama.trim() || !jurusan.trim()) {
+          setError("Mohon isi nama dan jurusan");
+          return;
         }
         onSimpan({
             id: pesertaEdit ? pesertaEdit.id : Date.now(),
