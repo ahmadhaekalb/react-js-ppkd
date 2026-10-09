@@ -1,48 +1,75 @@
-// import { Modal, Button } from "react-bootstrap";
-
 import
-{ Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from "@/components/ui/dialog";
+{
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Button } from "./ui/button";
 
-const AppModal = ({ show, onClose, title, children, onSubmit, submitLabel = "Save", cancelLabel = "Cancel", isLoading = false, showFooter = true }) =>
+const AppModal = ({
+  show,
+  onClose,
+  onSubmit,
+  submitLabel = "Save",
+  cancelLabel = "Cancel",
+  isLoading = false,
+  showFooter = true,
+  children,
+  title,
+}) =>
 {
   return (
-    <Dialog open={show} openChange={onClose}>
-      <DialogTrigger>Open</DialogTrigger>
-      <DialogContent className="sm:max-w-[540px]">
+    <Dialog open={show} onOpenChange={onClose}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            This action cannot be undone. This will permanently delete your account
-            and remove your data from our servers.
+            Silakan isi data user.
           </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={onSubmit}>
-          <div className="py-2">{children}</div>
+          <div className="">{children}</div>
           <DialogFooter>
-            <Button type="sumit" disable={isLoading}>
-              {isLoading ? 'Loading...' : submitLabel}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Loading..." : submitLabel}
             </Button>
             <Button variant="outline" onClick={() => onClose(false)}>
               {cancelLabel}
             </Button>
           </DialogFooter>
         </form>
+        
+        {/* LEWATI DULU */}
+
+        {/* {showFooter && (
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+            >
+              {cancelLabel}
+            </Button>
+
+            <Button
+              type="button"
+              onClick={onSubmit}
+              disabled={isLoading}
+            >
+              {isLoading ? "Loading..." : submitLabel}
+            </Button>
+          </div>
+        )} */}
+
+        {/* LEWATI DULU */}
+
       </DialogContent>
     </Dialog>
   );
 };
 
 export default AppModal;
-
-{/* <Form.Group className="mb-3">
-                <Form.Label>Name</Form.Label>
-                <Form.Control type="text" name="name" placeholder="Enter your name" required value={formData.name} onChange={handleChange} />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Email</Form.Label>
-                <Form.Control type="email" name="email" placeholder="Enter your email" required value={formData.email} onChange={handleChange} />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Password</Form.Label>
-                <Form.Control type="password" name="password" placeholder="Enter your password" required value={formData.password} onChange={handleChange} />
-            </Form.Group> */}
