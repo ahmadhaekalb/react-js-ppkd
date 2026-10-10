@@ -1,24 +1,24 @@
 import pool from "../config/db.js";
-const USERS = [
-  {
-    id: 1,
-    name: "Haekal",
-    email: "haekal@gmail.com",
-    password: "12345678",
-  },
-  {
-    id: 2,
-    name: "Laras",
-    email: "laras@gmail.com",
-    password: "12345678",
-  },
-  {
-    id: 3,
-    name: "Ratna",
-    email: "ratna@gmail.com",
-    password: "12345678",
-  },
-];
+// const USERS = [
+//   {
+//     id: 1,
+//     name: "Haekal",
+//     email: "haekal@gmail.com",
+//     password: "12345678",
+//   },
+//   {
+//     id: 2,
+//     name: "Laras",
+//     email: "laras@gmail.com",
+//     password: "12345678",
+//   },
+//   {
+//     id: 3,
+//     name: "Ratna",
+//     email: "ratna@gmail.com",
+//     password: "12345678",
+//   },
+// ];
 
 // CRUD (Create, Read, Update, Delete)
 
@@ -71,7 +71,8 @@ export const getUserById = async (req, res) =>
 };
 
 // CREATE
-export const createUser = async(req, res) => {
+export const createUser = async (req, res) =>
+{
   const { name, email, password } = req.body; // <-- cara destruct
 
   try {
@@ -88,7 +89,7 @@ export const createUser = async(req, res) => {
     return res.status(201).json({
       status: true,
       message: "Create user success",
-      data: {id: user.insertId, name, email},
+      data: { id: user.insertId, name, email },
     });
   } catch (error) {
     return res.status(500).json({
@@ -101,7 +102,7 @@ export const createUser = async(req, res) => {
 
 
 //UPDATE
-export const updateUser = async(req, res) =>
+export const updateUser = async (req, res) =>
 {
   const id = parseInt(req.params.id);
   const { name, email, password } = req.body;
@@ -121,20 +122,34 @@ export const updateUser = async(req, res) =>
 };
 
 //DELETE
-export const deleteUser = (req, res) =>
+export const deleteUser = async (req, res) =>
 {
-  const id = parseInt(req.params.id);
-  const userIndex = USERS.findIndex((u) => u.id === id);
-
-  if (userIndex === -1) {
-    return res.status(404).json({
-      status: false,
-      message: "Delete user failed",
-    });
-  } else {
+  try {
+    const id = parseInt(req.params.id);
+    {/*const [user] =*/ } await pool.query("DELETE FROM users WHERE id=?", [id]);
     return res.status(200).json({
       status: true,
-      message: "Delete user success",
+      message: "DELETE IS SUCCESS!",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: false,
+      message: error.message,
     });
   }
+
+
+  // const userIndex = USERS.findIndex((u) => u.id === id);
+
+  // if (userIndex === -1) {
+  //   return res.status(404).json({
+  //     status: false,
+  //     message: "Delete user failed",
+  //   });
+  // } else {
+  //   return res.status(200).json({
+  //     status: true,
+  //     message: "Delete user success",
+  //   });
+  // }
 };
