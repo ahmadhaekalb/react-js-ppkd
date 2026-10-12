@@ -48,9 +48,9 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="John Doe">
+            <SidebarMenuButton tooltip="Jawir Indramayu">
               <User2 />
-              <span className="font-medium">John Doe</span>
+              <span className="font-medium">Jawir Indramayu</span>
               <ChevronUp className="ml-auto" />
             </SidebarMenuButton>
           </SidebarMenuItem>

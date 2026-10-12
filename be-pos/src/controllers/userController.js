@@ -104,9 +104,27 @@ export const createUser = async (req, res) =>
 //UPDATE
 export const updateUser = async (req, res) =>
 {
-  const id = parseInt(req.params.id);
-  const { name, email, password } = req.body;
-  const [user] = await pool.query("UPDATE users SET name=?, email=?, password=? WHERE id=?", [name, email, password, id]);
+  try {
+    const id = parseInt(req.params.id);
+    const { name, email, password, is_active } = req.body;
+    if (!password) {
+            const [user] = await pool.query("UPDATE users SET name=?, email=?, password=?, is_active=? WHERE id=?", [name, email, password,is_active, id]);
+        } else {
+            const [user] = await pool.query("UPDATE users SET name=?, email=?, password=?, is_active=? WHERE id=?", [name, email, password, is_active, id]);
+        }
+    return res.status(200).json({
+      status: true,
+      message: 'Update user success!',
+      data: user,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: false,
+      message: "Create user failed",
+      error: error.message,
+    });
+  }
+
   // const userIndex = USERS.findIndex((u) => u.id === id);
   // USERS[userIndex] = {
   //   ...USERS[userIndex],
@@ -114,11 +132,7 @@ export const updateUser = async (req, res) =>
   //   ...(email && { email }),
   //   ...(password && { password }),
   // };
-  return res.status(200).json({
-    status: true,
-    message: 'Update user success!',
-    data: user,
-  });
+
 };
 
 //DELETE

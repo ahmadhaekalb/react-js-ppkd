@@ -31,6 +31,7 @@ export default function Login()
   {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMsg("");
 
     try {
       const res = await fetch('http://localhost:3000/api/auth/login', {
@@ -45,7 +46,7 @@ export default function Login()
       if (!res.ok) {
         throw new Error(result.message || "Please check your email and password!");
       }
-      localStorage.setItem("", result.data.token);
+      localStorage.setItem("token", result.data.token);
       setTimeout(() =>
       {
         setIsLoading(false);
@@ -53,6 +54,7 @@ export default function Login()
       }, 0);
     } catch (error) {
       console.log(error);
+      setErrorMsg(error.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
     }
