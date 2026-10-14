@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
+import api from "@/services/api.js"
 
 export default function Login()
 {
@@ -34,27 +35,18 @@ export default function Login()
     setErrorMsg("");
 
     try {
-      const res = await fetch('http://localhost:3000/api/auth/login', {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.message || "Please check your email and password!");
-      }
-      localStorage.setItem("token", result.data.token);
-      setTimeout(() =>
-      {
-        setIsLoading(false);
-        navigate("/dashboard");
-      }, 0);
+      const res = await api.post("/auth/login", formData);
+      console.log(res.data.data.token);
+      localStorage.setItem("token", res.data.token);
+      navigate("/dashboard");
+      // setTimeout(() =>
+      // {
+      //   setIsLoading(false);
+      //   navigate("/dashboard");
+      // }, 0);
     } catch (error) {
-      console.log(error);
-      setErrorMsg(error.message || "An unexpected error occurred.");
+      console.log(error.essage);
+      setErrorMsg(error.message);
     } finally {
       setIsLoading(false);
     }
