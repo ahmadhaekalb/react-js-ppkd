@@ -108,6 +108,7 @@ export const updateUser = async (req, res) =>
     const id = parseInt(req.params.id);
     const { name, email, password, is_active } = req.body;
     if (!password) {
+            // eslint-disable-next-line no-unused-vars
             const [user] = await pool.query("UPDATE users SET name=?, email=?, password=?, is_active=? WHERE id=?", [name, email, password,is_active, id]);
         } else {
             const [user] = await pool.query("UPDATE users SET name=?, email=?, password=?, is_active=? WHERE id=?", [name, email, password, is_active, id]);
