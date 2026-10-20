@@ -36,7 +36,7 @@ export default function Login()
 
     try {
       const res = await api.post("/auth/login", formData);
-      console.log(res.data.data.token);
+      console.log(res);
       localStorage.setItem("token", res.data.token);
       navigate("/dashboard");
       // setTimeout(() =>

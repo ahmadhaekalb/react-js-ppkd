@@ -1,32 +1,53 @@
-// eslint-disable-next-line no-unused-vars
 import pool from "../config/db.js";
 import { snap } from "../config/midtrans.js";
-// eslint-disable-next-line no-unused-vars
+
 export const createTransaction = async (req, res) =>
 {
+  const connection = await pool.getConnection();
   try {
-    // eslint-disable-next-line no-unused-vars
-    const connection = await pool.getConnection();
+    await connection.beginTransaction();
 
-    const { order_number, user_id, payment_method, subtotal, tax, total, items } = req.body;
-    // eslint-disable-next-line no-unused-vars
-    const [transaction] = await pool.query("INSERT INTO orders (order_number, user_id, payment_method, subtotal, tax, total) VALUES (?,?,?,?,?,?)",
-      // eslint-disable-next-line no-undef
-      [order_number, user_id, payment_method, subtotal, tax, total]);
+    const { order_number, user_id, payment_method, subtotal, tax, total, items = [], pay = 0 } = req.body;
+    const userId = req.user?.id;
+    // const isMidtrans = String(payment_method) === "1" || payment_method === "midtrans";
+    let change = 0;
+    let cashReceive = 0;
+    let status = "pending";
+
+    if (payment_method === 2) {
+      cashReceive = Number(pay);
+      if (cashReceive < Number(total)) {
+        await connection.rollback();
+        return res.status(400).json({
+          status: false,
+          message: "Cash less than total",
+        });
+      }
+      change = cashReceive - Number(total);
+      status = "settlement";
+    }
+
+
+    const orderNumber = await generateOrderNumber(connection);
+    console.log("order number", orderNumber);
+
+    const [transaction] = await pool.query("INSERT INTO orders (order_number, user_id, payment_method, subtotal, tax, total, pay, status) VALUES (?,?,?,?,?,?,?,?)",
+      [orderNumber, user_id, payment_method, subtotal, tax, total, pay, status
+      ]);
+
 
     const orderId = transaction.insertId;
     if (items) {
       for (let item of items) {
-        await pool.query("INSERT INTO order_details (order_id, product_id, qty, price) VALUES (?,?,?,?)",
-          [orderId, item.product_id, item.qty, item.price]);
+        await pool.query("INSERT INTO order_details (order_id,product_id,qty,price) VALUES(?,?,?,?)", [orderId, item.product_id, item.qty, item.price]);
       }
     }
     let midtransResponse = null;
-    if (payment_method === 1) {
+    if (Number(payment_method) === 1) {
       const parameter = {
         transaction_details: {
-          order_id: order_number,
-          gross_amount: total,
+          order_id: req.body.order_number,
+          gross_amount: req.body.total,
         },
         enable_payments: ['gopay'],
         item_details: items.map((item) => ({
@@ -34,17 +55,22 @@ export const createTransaction = async (req, res) =>
           price: item.price,
           quantity: item.qty,
           name: `Product ID ${item.product_id}`,
-        }))
+        })),
       };
       midtransResponse = await snap.createTransaction(parameter);
-    }
+    };
     await connection.commit();
-    connection.release();
     return res.status(201).json({
       status: true,
-      message: Number(payment_method) === 1 ? "Order Berhasil! Silahkan bayar dengan Gopay" : "Payment Cash Berhasil",
+      message: Number(payment_method) === 1 ? "Order Berhasil silahkan bayar dengan gopay" : "payment cash berhasil",
       order_id: orderId,
       order_number: order_number,
+      payment_details: payment_method == 2 ? {
+        total: Number(total),
+        cashReceive: cashReceive,
+        change: change,
+      }
+        : null,
       payment_gateway: midtransResponse
         ? {
           token: midtransResponse.token,
@@ -52,18 +78,86 @@ export const createTransaction = async (req, res) =>
         }
         : null,
     });
-    // return res.status(201).json({
-    //   status: true,
-    //   message: "Create is success!",
-    // });
+  } catch (error) {
+    await connection.rollback();
+    // connection.release();
+    // console.log(error);
+    return res.status(500).json({
+      status: false,
+      message: error.message
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+export const getAllTransaction = async (req, res) =>
+{
+  try {
+    const [rows] = await pool.query(`SELECT
+        orders.id,
+        orders.order_number,
+        orders.payment_method,
+        order_details.product_id,
+        products.name
+        FROM orders
+        LEFT JOIN order_details ON orders.id = order_details.order_id
+        LEFT JOIN products ON order_details.product_id = products.id ORDER BY orders.id DESC`);
+
+
+    const orderMap = {};
+    rows.forEach((row) =>
+    {
+      if (!orderMap[row.id]) {
+        orderMap[row.id] = {
+          id: row.id,
+          order_number: row.order_number,
+          payment_method: row.payment_method,
+          items: [],
+        };
+      }
+      if (row.product_id) {
+        orderMap[row.id].items.push({
+          product_id: row.product_id,
+          name: row.name,
+        });
+      }
+    });
+    const orders = Object.values(orderMap);
+    return res.status(200).json({
+      status: true,
+      data: orders,
+    });
   } catch (error) {
     return res.status(500).json({
       status: false,
-      message: "Create transaction failed",
-      error: error.message,
+      message: error.message,
     });
   }
-  // eslint-disable-next-line no-unused-vars
-
-
 };
+
+const generateOrderNumber = async (connection) =>
+{
+  //TR-19102026-001
+  const now = new Date();
+  const year = now.getFullYear(); //26
+  const month = now.getMonth();
+  const date = now.getDate();
+  const prefix = `TR-${year}${month}${date}`;
+
+  //query
+  const lastorder = await connection.query
+    ("SELECT order_number FROM orders WHERE order_number LIKE ? ORDER BY id DESC LIMIT 1 FOR UPDATE", [`${prefix}`]);
+  const nextNumber = 1;
+  if (lastorder.length > 0) {
+    const lastNumber = lastorder[0].order_number;
+    const currentNumber = parseInt(lastNumber.split("-")[2], 10);
+    if (!isNaN(currentNumber)) {
+      nextNumber = currentNumber + 1;
+
+    }
+
+  }
+  return `${prefix}${String(nextNumber).padStart(4, "0")}`; //000
+};
+
