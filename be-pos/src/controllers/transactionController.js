@@ -28,11 +28,11 @@ export const createTransaction = async (req, res) =>
     }
 
 
-    const orderNumber = await generateOrderNumber(connection);
-    console.log("order number", orderNumber);
+    // const orderNumber = await generateOrderNumber(connection);
+    // console.log("order number", orderNumber);
 
     const [transaction] = await pool.query("INSERT INTO orders (order_number, user_id, payment_method, subtotal, tax, total, pay, status) VALUES (?,?,?,?,?,?,?,?)",
-      [orderNumber, user_id, payment_method, subtotal, tax, total, pay, status
+      [order_number, userId, payment_method, subtotal, tax, total, pay, status
       ]);
 
 
@@ -46,8 +46,11 @@ export const createTransaction = async (req, res) =>
     if (Number(payment_method) === 1) {
       const parameter = {
         transaction_details: {
-          order_id: req.body.order_number,
-          gross_amount: req.body.total,
+          order_id: order_number,
+          gross_amount: subtotal,
+
+        }, callbacks: {
+          finish: "http://localhost5173/transaction/print"
         },
         enable_payments: ['gopay'],
         item_details: items.map((item) => ({

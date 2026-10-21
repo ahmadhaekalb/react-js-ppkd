@@ -1,7 +1,6 @@
 import api from "@/services/api.js";
 import { useState, useEffect } from "react";
-
-import { Card, CardContent, /*CardDescription, CardFooter,*/ CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +13,14 @@ import
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CardFooter } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
+// import { CardFooter } from "react-bootstrap";
 // import { SelectValue } from "@base-ui/react";
 
 
 const FormTransaction = () =>
 {
+  const navigate = useNavigate();
   const _initForm = {
     id: null,
     name: "",
@@ -29,8 +30,8 @@ const FormTransaction = () =>
   };
 
   const [products, setProducts] = useState([]);
-  const [formData, setFormData] = useState(_initForm);
-  const [isEdit, setIsEdit] = useState(false);
+  // const [formData, setFormData] = useState(_initForm);
+  // const [isEdit, setIsEdit] = useState(false);
   const [cart, setCart] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
@@ -71,21 +72,63 @@ const FormTransaction = () =>
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const updateQty = (id, qty) =>
+  const updateQty = (id, delta) =>
   {
-    let nextQty = "";
     setCart((prev) =>
-    {
-      prev.map((item) =>
-      {
-        if (item.id === id) {
-          const nextQty = item.qty + qty;
-          return nextQty > 0 && nextQty <= item.stock ? { ...item, qty: nextQty } : item;
-        }
-        return item;
-      })
-        .filter((item) => item.qty > 0);
-    });
+      prev
+        .map((item) =>
+        {
+          if (item.id === id) {
+            const nextQty = item.qty + delta;
+            return nextQty <= item.stock ? { ...item, qty: nextQty } : item;
+          }
+          return item;
+        })
+        .filter((item) => item.qty > 0)
+    );
+  };
+
+  const TAX_RATE = 0.1;
+  const totalAmount = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  const tax = Math.round(totalAmount * TAX_RATE);
+  const total = totalAmount + tax;
+  const change = Number(cashAmount) - total;
+
+  const handleCheckout = async () =>
+  {
+    try {
+      setLoading(true);
+      const payload = {
+        order_number: Date.now(),
+        payment_method: paymentMethod === "cash" ? 2 : 1,
+        items: cart.map((item) => ({
+          product_id: item.id,
+          qty: item.qty,
+          price: item.price
+        })),
+        subtotal: totalAmount,
+        pay: cashAmount,
+        tax: tax,
+        total: total
+      };
+      const response = await api.post('/transaction', payload);
+      // const resData = response.data;
+
+      if (!response.status){
+        alert(response.message || "Failed process transaction")
+        return;
+      }
+      if(paymentMethod === "qris" && response.payment_gateway?.redirect_url){
+        window.location.href = response.payment_gateway.redirect_url;
+        return;
+      }
+      navigate('/transaction/print');
+
+    } catch (error) {
+      console.log('error transaction order', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // const handleOpenModal = () =>
@@ -116,55 +159,55 @@ const FormTransaction = () =>
   //   });
   // };
 
-  const handleSubmit = async (e) =>
-  {
-    e.preventDefault();
+  // const handleSubmit = async (e) =>
+  // {
+  //   e.preventDefault();
 
-    try {
-      const payload = {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        is_active: parseInt(formData.is_active),
-      };
-      if (isEdit) {
+  //   try {
+  //     const payload = {
+  //       name: formData.name,
+  //       email: formData.email,
+  //       password: formData.password,
+  //       is_active: parseInt(formData.is_active),
+  //     };
+  //     if (isEdit) {
 
-        await api.put(`/transaction/${formData.id}`, payload); // PUT <-- untuk update data
-        // settransactions(transactions.map((transaction) => (transaction.id === formData.id ? formData : transaction)));
-      } else {
-        await api.post("/transaction", payload); // POST <-- menulis/memasukkan data baru
+  //       await api.put(`/transaction/${formData.id}`, payload); // PUT <-- untuk update data
+  //       // settransactions(transactions.map((transaction) => (transaction.id === formData.id ? formData : transaction)));
+  //     } else {
+  //       await api.post("/transaction", payload); // POST <-- menulis/memasukkan data baru
 
-        //   const newtransaction = {
-        //     ...formData,
-        //     id: Date.now(),
-        //    };
+  //       //   const newtransaction = {
+  //       //     ...formData,
+  //       //     id: Date.now(),
+  //       //    };
 
-        //   settransactions([...transactions, newtransaction]);
-        // }
-      }
+  //       //   settransactions([...transactions, newtransaction]);
+  //       // }
+  //     }
 
-      setFormData(_initForm);
-    } catch (error) {
-      const errMsg = error.message;
-      console.log(errMsg);
-    } finally {
-      fetchTransaction();
-      setShowModal(false);
-    }
+  //     setFormData(_initForm);
+  //   } catch (error) {
+  //     const errMsg = error.message;
+  //     console.log(errMsg);
+  //   } finally {
+  //     fetchTransaction();
+  //     setShowModal(false);
+  //   }
 
 
 
-  };
+  // };
 
-  const handleDelete = async (id) =>
-  {
-    const confirmation = window.confirm("Are you sure want to delete this data?");
-    if (confirmation) {
-      await api.delete(`/transaction/${id}`);
-      fetchTransaction();
-      // settransactions(transactions.filter((u) => u.id !== id));
-    }
-  };
+  // const handleDelete = async (id) =>
+  // {
+  //   const confirmation = window.confirm("Are you sure want to delete this data?");
+  //   if (confirmation) {
+  //     await api.delete(`/transaction/${id}`);
+  //     fetchTransaction();
+  //     // settransactions(transactions.filter((u) => u.id !== id));
+  //   }
+  // };
 
   return (
     <>
@@ -244,17 +287,28 @@ const FormTransaction = () =>
 
               <div className="space-y-1.5 pt-3 border-t text-xs">
                 <div className="flex justify-between font-semibold text-sm">
+                  <span>Subtotal</span>
+                  <span>{Number(totalAmount).toLocaleString("id-ID",
+                    { style: "currency", currency: "IDR", maximumFractionDigits: 0 })}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-sm">
+                  <span>PAJAK BUAT DIPAKE MBG 10%</span>
+                  <span>{Number(tax).toLocaleString("id-ID",
+                    { style: "currency", currency: "IDR", maximumFractionDigits: 0 })}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-sm">
                   <span>Total</span>
-                  <span>Rp100.000</span>
+                  <span>{Number(total).toLocaleString("id-ID",
+                    { style: "currency", currency: "IDR", maximumFractionDigits: 0 })}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Change/kembalian</span>
-                  <span>Rp100.000</span>
+                  <span>{Number(change).toLocaleString("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 })}</span>
                 </div>
               </div>
             </CardContent>
             <CardFooter className="p-4 border-t">
-              <Button className="w-full text-xs font-semibold">
+              <Button onClick={handleCheckout} className="w-full text-xs font-semibold">
                 {loading ? "Loading..." : "Save Transaction"}
               </Button>
             </CardFooter>
