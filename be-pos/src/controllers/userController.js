@@ -1,4 +1,6 @@
 import pool from "../config/db.js";
+import prisma from "../config/prisma.js";
+import bcrypt from "bcrypt";
 // const USERS = [
 //   {
 //     id: 1,
@@ -27,12 +29,22 @@ import pool from "../config/db.js";
 export const getAllUser = async (req, res) =>
 {
   try {
-    const [rows] = await pool.query("SELECT id, name, email, is_active FROM users");
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        created_at: true,
+        updated_at: true,
+      },
+      orderBy: { id: "desc" },
+    });
+    // const [rows] = await pool.query("SELECT id, name, email, is_active FROM users");
     return res.status(200).json({
       status: true,
       message: "Fetch User Success",
-      total: rows.length,
-      data: rows,
+      total: users.length,
+      data: users,
     });
   } catch (error) {
     return res.status(500).json({
@@ -47,9 +59,13 @@ export const getUserById = async (req, res) =>
 {
 
   try {
-    const id = parseInt(req.params.id);
-    const user = await pool.query("SELECT id, name, email, is_active FROM users WHERE id= ?", [id]);
+    // const user = await pool.query("SELECT id, name, email, is_active FROM users WHERE id= ?", [id]);
     // const user = USERS.find((u) => u.id === id);
+    const id = parseInt(req.params.id);
+    const user = await prisma.user.findUnique({
+      where: { id: id },
+    });
+
     if (!user) {
       res.status(404).json({
         status: false,
@@ -84,12 +100,23 @@ export const createUser = async (req, res) =>
     // };
     // USERS.push(newUser);
 
-    const [user] = await pool.query("INSERT INTO users(name, email, password) VALUES (?,?,?)", [name, email, password]);
-
+    // const [user] = await pool.query("INSERT INTO users(name, email, password) VALUES (?,?,?)", [name, email, password]);
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      }
+    });
     return res.status(201).json({
       status: true,
       message: "Create user success",
-      data: { id: user.insertId, name, email },
+      data: user,
     });
   } catch (error) {
     return res.status(500).json({
@@ -106,13 +133,35 @@ export const updateUser = async (req, res) =>
 {
   try {
     const id = parseInt(req.params.id);
-    const { name, email, password, is_active } = req.body;
-    if (!password) {
-            // eslint-disable-next-line no-unused-vars
-            const [user] = await pool.query("UPDATE users SET name=?, email=?, password=?, is_active=? WHERE id=?", [name, email, password,is_active, id]);
-        } else {
-            const [user] = await pool.query("UPDATE users SET name=?, email=?, password=?, is_active=? WHERE id=?", [name, email, password, is_active, id]);
-        }
+    const { name, email, password } = req.body;
+    // let update = "";
+
+    const dataUpdate = {};
+    if (email) dataUpdate.email = email;
+    if (name) dataUpdate.name = name;
+    if (password) {
+      dataUpdate.password = await bcrypt.hash(password, 10);
+    }
+    const user = await prisma.user.update({
+      where: { id: id },
+      data: dataUpdate,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        created_at: true,
+        updated_at: true,
+      },
+    });
+
+    // if (!password) {
+    //   // eslint-disable-next-line no-unused-vars
+    //   update = await pool.query("UPDATE users SET name=?, email=?, password=?, is_active=? WHERE id=?", [name, email, password, is_active, id]);
+    // } else {
+    //   // eslint-disable-next-line no-unused-vars
+    //   update = pool.query("UPDATE users SET name=?, email=?, password=?, is_active=? WHERE id=?", [name, email, password, is_active, id]);
+    // }
+    // const [data] = pool.query(`SELECT * FROM user WHERE id = ?`, [id]);
     return res.status(200).json({
       status: true,
       message: 'Update user success!',
@@ -141,7 +190,12 @@ export const deleteUser = async (req, res) =>
 {
   try {
     const id = parseInt(req.params.id);
-    {/*const [user] =*/ } await pool.query("DELETE FROM users WHERE id=?", [id]);
+    await
+      // {/*const [user] =*/ } await pool.query("DELETE FROM users WHERE id=?", [id]);
+      await prisma.user.delete({
+        where: { id: id },
+      });
+
     return res.status(200).json({
       status: true,
       message: "DELETE IS SUCCESS!",
